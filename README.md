@@ -215,6 +215,35 @@ sheet forgot (the app tells you which ones those are).
 
 ---
 
+## Who can get in
+
+Worth understanding before you put the address anywhere, because the honest answer differs
+depending on how you have it set up.
+
+**With browser storage (the default), there are no accounts.** Anyone who has the web
+address can open the app. What they *cannot* do is see your data: the catalog, customers,
+shorthand and orders live in each person's own browser, so a stranger who opens your
+address gets an empty copy of the software with none of your store in it. Nothing of yours
+travels anywhere.
+
+Two things follow from that, and **Settings → Who can get in** now says both plainly
+instead of leaving you to discover them:
+
+- **A passcode on the device.** Set one and this phone, tablet or computer asks for it
+  before showing anything — which is what stops a passer-by reading the order history off
+  the till tablet. Only a PBKDF2 hash of it is stored, never the passcode. It is per
+  device, and it does not restrict the address: a visitor who has never been here has
+  nothing to check against, and would just get the same empty copy.
+- **Staff accounts, which do restrict the data.** Connect Supabase (below) and the app
+  requires a real email-and-password login, with the database itself refusing to hand any
+  row to someone who is not signed in. This is the only option here enforced by a server
+  rather than by the browser in front of you, and it is the one to use if staff share a
+  catalog and an order history.
+
+If you also want the *address* itself private — a gate before the app even loads — that
+belongs to your host rather than to this app. Netlify offers site-level password
+protection and Netlify Identity; check which is on your plan.
+
 ## Going multi-user
 
 Out of the box everything lives in the browser (IndexedDB). That is genuinely usable for
@@ -249,6 +278,41 @@ Supabase, then restore.
 ---
 
 ## Deploying
+
+### Connecting Supabase at deploy time
+
+Set these in the host's environment settings (Netlify: **Site configuration →
+Environment variables**) and every device that opens the site is connected already, with
+nothing to type in:
+
+| Variable | |
+|---|---|
+| `SUPABASE_URL` | also accepted as `VITE_SUPABASE_URL` |
+| `SUPABASE_ANON_KEY` | also accepted as `VITE_SUPABASE_ANON_KEY`. The **anon public** key — never the service-role key |
+| `STORE_NAME` | optional; names the app and its login screen |
+
+The build turns them into a `config.json` published next to the app, which the app reads
+at start-up. Anyone can still override it on their own device from Settings, in either
+direction, and that choice sticks.
+
+### If the deployed site shows "Page not found"
+
+The build succeeding and the site 404ing at the same time almost always means the host
+published a folder with no `index.html` in it. Check, in this order:
+
+1. **Which repository and branch the site is building.** A site pointed at a repository
+   that does not hold this code, or at a branch that does not have it, builds something
+   else entirely — or nothing.
+2. **The deploy took under ten seconds.** A real build here takes roughly 15–30 seconds.
+   Anything much faster did not run one, so the publish directory never appeared.
+3. **Base directory.** Leave it empty unless the app genuinely lives in a sub-folder.
+4. **Publish directory** is `dist/demo/browser` — the `browser` part matters. Angular's
+   application builder puts the site one level below the `outputPath` in `angular.json`.
+
+`netlify.toml` in this repository already sets the build command, the publish directory,
+the Node version and the SPA redirect, so a correctly connected site needs no settings in
+the host's UI at all.
+
 
 The build is a static site, so any static host works. `netlify.toml` is already set up:
 
